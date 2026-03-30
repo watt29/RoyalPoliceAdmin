@@ -1,0 +1,54 @@
+# Render Blueprint for Smart Police Report Hybrid
+services:
+  # Python API Backend
+  - type: web
+    name: smart-police-api
+    runtime: python3
+    buildCommand: cd python-services && pip install -r requirements-core.txt
+    startCommand: cd python-services && uvicorn main_api:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_ENV
+        value: production
+      - key: TELEGRAM_BOT_TOKEN
+        fromService:
+          type: web
+          name: smart-police-bot
+          envVarKey: TELEGRAM_BOT_TOKEN
+      - key: GOOGLE_SHEET_ID
+        sync: false  # จะต้องตั้งค่าใน Dashboard
+      - key: GOOGLE_CREDENTIALS_PATH
+        value: service_account.json
+      - key: BOT_API_URL
+        fromService:
+          type: web
+          name: smart-police-bot
+          property: host
+
+  # Node.js Telegram Bot
+  - type: web
+    name: smart-police-bot
+    runtime: node
+    buildCommand: cd telegram-bot && npm install
+    startCommand: cd telegram-bot && npm start
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false  # จะต้องตั้งค่าใน Dashboard
+      - key: PYTHON_API_URL
+        fromService:
+          type: web
+          name: smart-police-api
+          property: host
+
+  # Optional: Redis for caching (paid plan required)
+  # - type: redis
+  #   name: smart-police-redis
+  #   plan: starter
+  #   maxmemoryPolicy: allkeys-lru
+
+databases: []

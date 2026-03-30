@@ -6,8 +6,15 @@ if 'TELEGRAM_BOT_TOKEN' in os.environ:
     os.environ.pop('TELEGRAM_BOT_TOKEN', None) # type: ignore
 
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from the shared .env file
+# Logic: Look for .env in the same folder, then in parent/shared/
+base_dir = os.path.dirname(os.path.abspath(__file__))
+shared_env = os.path.join(os.path.dirname(base_dir), 'shared', '.env')
+
+if os.path.exists(shared_env):
+    load_dotenv(shared_env)
+else:
+    load_dotenv()
 
 class Config:
     """Configuration class for the Telegram Memo Bot"""
@@ -25,7 +32,12 @@ class Config:
     # Google Sheets Configuration
     GOOGLE_SHEET_NAME = os.getenv('GOOGLE_SHEET_NAME', 'Smart_Memo_Database')
     GOOGLE_SHEET_ID = os.getenv('GOOGLE_SHEET_ID', '1xxwyReavlHXmKqEIEdem7zUAdlVS5Kv2D_7S6Rsf2UA')
-    GOOGLE_CREDENTIALS_PATH = os.getenv('GOOGLE_CREDENTIALS_PATH', 'service_account.json')
+    
+    # Smarter Logic: Check shared/ folder first for credentials
+    _cred_name = os.getenv('GOOGLE_CREDENTIALS_PATH', 'service_account.json')
+    _shared_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'shared', _cred_name)
+    
+    GOOGLE_CREDENTIALS_PATH = _shared_path if os.path.exists(_shared_path) else _cred_name
     GOOGLE_DRIVE_FOLDER_ID = os.getenv('GOOGLE_DRIVE_FOLDER_ID', '1W7HAAqSSLNpRMmIKbtqjmm_ayp_PnBOT')
     SERVICE_ACCOUNT_EMAIL = os.getenv('SERVICE_ACCOUNT_EMAIL', 'telegram-memo-bot@telegram-smart-memo.iam.gserviceaccount.com')
     

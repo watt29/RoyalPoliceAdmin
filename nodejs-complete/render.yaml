@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: smart-police-bot
+    env: node
+    plan: starter
+    buildCommand: npm install --production
+    startCommand: node index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        fromService:
+          type: web
+          property: port
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: ADMIN_CHAT_ID
+        sync: false
+      - key: GOOGLE_SHEET_NAME
+        value: Smart_Memo_Database
+      - key: GOOGLE_SHEET_ID
+        sync: false
+      - key: GOOGLE_CREDENTIALS_PATH
+        value: service_account.json
+      - key: MAX_FILE_SIZE
+        value: 52428800
+      - key: MAX_FILES_PER_USER
+        value: 100
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+    healthCheckPath: /health
+    disk:
+      name: smart-police-data
+      mountPath: /app/user-files
+      sizeGB: 1

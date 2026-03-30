@@ -1,5 +1,6 @@
 const TelegramBot = require('node-telegram-bot-api');
 const axios = require('axios');
+const express = require('express');
 require('dotenv').config({ path: '../shared/.env' });
 
 class SmartPoliceBot {
@@ -8,8 +9,12 @@ class SmartPoliceBot {
         this.bot = new TelegramBot(this.token, { polling: true });
         this.pythonApiUrl = process.env.PYTHON_API_URL || 'http://localhost:8000';
 
+        // For Render deployment
+        this.isProduction = process.env.NODE_ENV === 'production';
+
         this.setupHandlers();
-        console.log('🤖 Smart Police Bot เริ่มทำงานแล้ว...');
+        console.log(`🤖 Smart Police Bot starting... (Production: ${this.isProduction})`);
+        console.log(`🐍 Python API URL: ${this.pythonApiUrl}`);
     }
 
     setupHandlers() {
@@ -34,6 +39,12 @@ class SmartPoliceBot {
         this.bot.on('error', (error) => {
             console.error('Bot Error:', error);
         });
+
+        // Polling error handling for Render
+        this.bot.on('polling_error', (error) => {
+            console.error('Polling Error:', error);
+            // In production, you might want to restart or use webhooks
+        });
     }
 
     async handleStart(msg) {
@@ -41,10 +52,11 @@ class SmartPoliceBot {
         const welcomeMessage = `
 🚔 **ยินดีต้อนรับสู่ Smart Police Report Bot**
 
-ระบบรายงานตำรวจอัจฉริยะ
+ระบบรายงานตำรวจอัจฉริยะ (Hybrid Architecture)
 ✅ บันทึกข้อมูลอัตโนมัติ
 ✅ ค้นหาข้อมูลรวดเร็ว
 ✅ แจ้งเตือนอัจฉริยะ
+🌐 **Deployed on Render.com**
 
 พิมพ์ข้อความเพื่อเริ่มใช้งาน หรือเลือกเมนูด้านล่าง
         `;
@@ -92,6 +104,12 @@ class SmartPoliceBot {
                     last_name: msg.from.last_name,
                     username: msg.from.username
                 }
+            }, {
+                timeout: 30000, // 30 second timeout for Render
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'SmartPoliceBot/2.0'
+                }
             });
 
             const result = response.data;
@@ -114,12 +132,23 @@ class SmartPoliceBot {
                     }
                 }
             } else {
-                await this.bot.sendMessage(chatId, `❌ เกิดข้อผิดพลาด: ${result.error}`);
+                await this.bot.sendMessage(chatId, `❌ เกิดข้อผิดพลาด: ${result.error || 'ไม่ทราบสาเหตุ'}`);
             }
 
         } catch (error) {
-            console.error('Error processing message:', error);
-            await this.bot.sendMessage(chatId, '❌ ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง');
+            console.error('Error processing message:', error.message);
+
+            let errorMessage = '❌ ระบบขัดข้อง กรุณาลองใหม่อีกครั้ง';
+
+            if (error.code === 'ECONNREFUSED') {
+                errorMessage = '❌ ไม่สามารถเชื่อมต่อ Python API ได้ กรุณาลองใหม่ในภายหลัง';
+            } else if (error.code === 'ENOTFOUND') {
+                errorMessage = '❌ ไม่พบ Python API Service';
+            } else if (error.response) {
+                errorMessage = `❌ API Error: ${error.response.status} ${error.response.statusText}`;
+            }
+
+            await this.bot.sendMessage(chatId, errorMessage);
         }
     }
 
@@ -138,6 +167,12 @@ class SmartPoliceBot {
                 user_id: query.from.id,
                 chat_id: chatId,
                 message_id: messageId
+            }, {
+                timeout: 30000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'SmartPoliceBot/2.0'
+                }
             });
 
             const result = response.data;
@@ -161,7 +196,7 @@ class SmartPoliceBot {
             }
 
         } catch (error) {
-            console.error('Error handling callback query:', error);
+            console.error('Error handling callback query:', error.message);
             await this.bot.sendMessage(chatId, '❌ เกิดข้อผิดพลาดในการประมวลผล');
         }
     }
@@ -179,14 +214,52 @@ class SmartPoliceBot {
             return false;
         }
     }
+
+    // Health check for the bot
+    async getBotInfo() {
+        try {
+            const info = await this.bot.getMe();
+            return {
+                success: true,
+                bot_info: info,
+                python_api_url: this.pythonApiUrl,
+                environment: this.isProduction ? 'production' : 'development'
+            };
+        } catch (error) {
+            return {
+                success: false,
+                error: error.message
+            };
+        }
+    }
 }
 
-// สร้าง Express server สำหรับรับ webhooks จาก Python
-const express = require('express');
+// สร้าง Express server สำหรับ health checks และ webhooks
 const app = express();
 app.use(express.json());
 
 let botInstance;
+
+// Health check endpoint สำหรับ Render
+app.get('/health', async (req, res) => {
+    try {
+        const botInfo = await botInstance.getBotInfo();
+        res.json({
+            status: 'healthy',
+            timestamp: new Date().toISOString(),
+            service: 'telegram-bot',
+            version: '2.0.0',
+            environment: process.env.NODE_ENV || 'development',
+            ...botInfo
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: 'unhealthy',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
 
 // Endpoint สำหรับ Python ส่งแจ้งเตือน
 app.post('/send-notification', async (req, res) => {
@@ -199,38 +272,79 @@ app.post('/send-notification', async (req, res) => {
     }
 });
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Root endpoint
+app.get('/', (req, res) => {
+    res.json({
+        service: 'Smart Police Report - Telegram Bot',
+        version: '2.0.0',
+        status: 'running',
+        architecture: 'hybrid',
+        platform: 'render.com',
+        timestamp: new Date().toISOString()
+    });
 });
 
 // เริ่มต้น bot และ server
 async function start() {
     try {
+        // ตรวจสอบ environment variables
+        if (!process.env.TELEGRAM_BOT_TOKEN) {
+            throw new Error('TELEGRAM_BOT_TOKEN is required');
+        }
+
         // สร้าง bot instance
         botInstance = new SmartPoliceBot();
 
         // เริ่ม Express server
-        const port = process.env.BOT_SERVER_PORT || 3000;
-        app.listen(port, () => {
+        const port = process.env.PORT || 3000;
+        app.listen(port, '0.0.0.0', () => {
             console.log(`🌐 Bot API Server running on port ${port}`);
+            console.log(`🔗 Health check: http://localhost:${port}/health`);
         });
 
+        // Test Python API connection
+        try {
+            const response = await axios.get(`${botInstance.pythonApiUrl}/health`, {
+                timeout: 10000
+            });
+            console.log('✅ Python API connection successful:', response.data.status);
+        } catch (error) {
+            console.warn('⚠️ Python API connection failed:', error.message);
+            console.warn('Bot will continue running, but functionality may be limited');
+        }
+
     } catch (error) {
-        console.error('Failed to start bot:', error);
+        console.error('Failed to start bot:', error.message);
         process.exit(1);
     }
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', () => {
-    console.log('🛑 Shutting down bot...');
+    console.log('🛑 Received SIGINT, shutting down gracefully...');
+    if (botInstance && botInstance.bot) {
+        botInstance.bot.stopPolling();
+    }
     process.exit(0);
 });
 
 process.on('SIGTERM', () => {
-    console.log('🛑 Shutting down bot...');
+    console.log('🛑 Received SIGTERM, shutting down gracefully...');
+    if (botInstance && botInstance.bot) {
+        botInstance.bot.stopPolling();
+    }
     process.exit(0);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    process.exit(1);
 });
 
 start();

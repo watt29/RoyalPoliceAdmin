@@ -91,9 +91,7 @@ class ContactHandler:
              await loading_msg.edit_text(response, parse_mode='Markdown')
              return
 
-        # C. Intent Dispatcher
-        if best_intent == "arrests" and scores["arrests"] >= 100:
-            if await self._detect_arrest_summary(update, context, text, timestamp): return
+        # C. Intent Dispatcher (Arrests removed)
         
         if best_intent == "firearm" and scores["firearm"] >= 100:
             if await self._detect_firearm_registry(update, context, text, timestamp): return
@@ -127,37 +125,9 @@ class ContactHandler:
     # INTERNALS: MODULAR PARSERS
     # ══════════════════════════════════════════════════════════════════════════════
 
-    async def _detect_arrest_summary(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, timestamp: str) -> bool:
-        """🟢 1.1 Arrest Summary Detection logic."""
-        if not ("จับกุม" in text and ("ผู้ต้องหา" in text or "ของกลาง" in text or "ข้อหา" in text)):
-            return False
+    # (Arrests functionality removed as requested)
 
-        loading = await update.message.reply_text("⏳ กำลังวิเคราะห์ข้อมูลการจับกุม...")
-        result = self._parse_arrest_record_deterministic(text)
-        
-        suspects = result.get("suspects", [])
-        if not suspects:
-            await loading.edit_text("❌ ไม่พบข้อมูลผู้ต้องหาในข้อความที่แจ้ง")
-            return True
-
-        bulk = []
-        dept = result.get("agency", "-")
-        charge = result.get("charge", "-")
-        place = result.get("location", "-")
-        
-        for s in suspects:
-            name = s.get("name", "-") # type: ignore
-            age = s.get("age", "-") # type: ignore
-            bulk.append([timestamp[:10], dept, name, age, "-", "-", charge, "-", place, "-", timestamp]) # type: ignore
-        
-        success = self.sheets.append_arrests_bulk(bulk)
-        summary = "\n".join([f"👤 {s.get('name', '-')} (อายุ {s.get('age', '-')})" for s in suspects[:10]]) # type: ignore
-        msg = (f"✅ **บันทึกการจับกุมสำเร็จ!**\n{self.DIVIDER}\n"
-               f"📌 **ข้อหา:** {charge}\n"
-               f"👥 **ผู้ต้องหา ({success} ราย):**\n{summary}")
-        if len(suspects) > 10: msg += f"\n...และอื่นๆ อีก {len(suspects)-10} ราย" # type: ignore
-        await loading.edit_text(msg + f"\n{self.DIVIDER}\n📁 ลงชีท Arrests เรียบร้อยครับ", parse_mode='Markdown')
-        return True
+        return False
 
     async def _detect_firearm_registry(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, timestamp: str) -> bool:
         """🔫 1.2 Firearm Registry Detection."""
@@ -212,9 +182,14 @@ class ContactHandler:
                 seq += 1 # type: ignore
 
         if bulk:
-            loading = await update.message.reply_text(f"🔫 พบข้อมูลปืน {len(bulk)} กระบอก กำลังบันทึก...")
+            loading = await update.message.reply_text("⏳ ตรวจพบข้อมูลอาวุธปืน... กำลังขึ้นทะเบียนพัสดุ")
             success = self.sheets.upsert_firearm_registry_bulk(bulk)
-            await loading.edit_text(f"✅ บันทึกปืน {success} กระบอก ลงชีท FirearmRegistry สำเร็จ")
+            
+            msg = (f"✅ **ขึ้นทะเบียนพัสดุปืนสำเร็จ!** 🔫\n"
+                   f"{self.DIVIDER}\n"
+                   f"🛡️ **จำนวน:** {success} กระบอก\n"
+                   f"📁 อัปเดตข้อมูลลงชีท **FirearmRegistry** ให้แล้วครับ")
+            await loading.edit_text(msg, parse_mode='Markdown')
             return True
         return False
 
@@ -246,7 +221,15 @@ class ContactHandler:
         try:
             if self.sheets.orders_sheet: # type: ignore
                 self.sheets.orders_sheet.append_row(row) # type: ignore
-            await update.message.reply_text(f"✅ บันทึกกิจกรรมอัตโนมัติ: **{topic}**\n📍 {loc}\n📅 {date_v} {time_v}", parse_mode='Markdown')
+            
+            msg = (f"🗓️ **บันทึกภารกิจ/นัดหมายสำเร็จ!**\n"
+                   f"{self.DIVIDER}\n"
+                   f"📌 **เรื่อง:** {topic}\n"
+                   f"📍 **สถานที่:** {loc}\n"
+                   f"📅 **เวลา:** {date_v} {time_v}\n"
+                   f"{self.DIVIDER}\n"
+                   f"📁 บันทึกลงในชีท **Orders** ให้เรียบร้อยครับ")
+            await update.message.reply_text(msg, parse_mode='Markdown')
             return True
         except Exception:
             return False
@@ -287,8 +270,14 @@ class ContactHandler:
                     "-", "-", "-", "-", "-", timestamp])
 
         if bulk:
+            loading = await update.message.reply_text("⏳ ตรวจพบข้อมูลรายชื่อบุคลากร... กำลังตรวจสอบความถูกต้อง")
             s = self.sheets.upsert_contacts_bulk(bulk)
-            await update.message.reply_text(f"✅ บันทึกรายชื่อเรียบร้อย {s} รายการ")
+            
+            msg = (f"✅ **อัปเกรดฐานข้อมูลบุคลากรสำเร็จ!** 👥\n"
+                   f"{self.DIVIDER}\n"
+                   f"📊 **จำนวน:** {s} รายการ\n"
+                   f"📁 บันทึกข้อมูลลงชีท **Contacts** เป็นที่เรียบร้อยครับ")
+            await loading.edit_text(msg, parse_mode='Markdown')
             return True
         return False
 
@@ -317,49 +306,54 @@ class ContactHandler:
         return False
 
     async def _parse_expenditure_and_memo(self, update: Update, context: ContextTypes.DEFAULT_TYPE, text: str, timestamp: str) -> bool:
-        """☕ 1.6 Expenditure and Natural Memo."""
-        kw_exp = {"น้ำมัน": "ค่าน้ำมันเชื้อเพลิง", "ไฟฟ้า": "ค่าไฟฟ้า (สถานีตำรวจ)"}
-        for k, full in kw_exp.items():
-            if k in text and any(m in text for m in ["มกราคม", "ม.ค.", "กุมภาพันธ์"]):
-                self.sheets.upsert_expenditure_bulk([[full, text.replace(k, "").strip(), "-"]])
-                await update.message.reply_text(f"✅ อัปเดตสถานะ {full} เรียบร้อย")
-                return True
+        """☕ 1.6 Expenditure and Natural Memo (Stronger Version)."""
+        # Dictionary of keywords to full sheet item names
+        kw_exp = {
+            "น้ำมัน": "ค่าน้ำมันเชื้อเพลิง",
+            "ไฟฟ้า": "ค่าไฟฟ้า (สถานีตำรวจ)",
+            "ประปา": "ค่าน้ำประปา",
+            "อินเทอร์เน็ต": "ค่าบริการอินเทอร์เน็ต",
+            "เน็ต": "ค่าบริการอินเทอร์เน็ต",
+            "โทรศัพท์": "ค่าโทรศัพท์",
+            "เบี้ยเลี้ยง": "งบประมาณเบี้ยเลี้ยง",
+            "OT": "งบประมาณ OT",
+            "โอที": "งบประมาณ OT"
+        }
         
-        for k in ["จด", "บันทึก"]:
-            if text.startswith(k) and len(text) > 5:
-                memo = text[len(k):].strip() # type: ignore
-                row = [memo, "-", "-", "Pending", "Normal", "Auto-Memo", timestamp] # type: ignore
-                if self.sheets.orders_sheet: # type: ignore
-                    self.sheets.orders_sheet.append_row(row) # type: ignore
-                    await update.message.reply_text(f"📝 บันทึกโน้ตด่วน: **{memo}**\nลงชีท Orders เรียบร้อย", parse_mode='Markdown')
+        # 1. Detect Expenditure Updates
+        for k, full in kw_exp.items():
+            if k in text:
+                # Check for month/year keywords to confirm it's a status update
+                month_keywords = ["มกราคม", "ม.ค.", "กุมภาพันธ์", "ก.พ.", "มีนาคม", "มี.ค.", "เมษายน", "เม.ย.", 
+                                  "พฤษภาคม", "พ.ค.", "มิถุนายน", "มิ.ย.", "กรกฎาคม", "ก.ค.", "สิงหาคม", "ส.ค.", 
+                                  "กันยายน", "ก.ย.", "ตุลาคม", "ต.ค.", "พฤศจิกายน", "พ.ย.", "ธันวาคม", "ธ.ค."]
+                if any(m in text for m in month_keywords) or "ปี" in text or "ประเมิน" in text:
+                    # Extract the value/status (text after the keyword)
+                    status_val = text.replace(k, "").replace("จด", "").replace("บันทึก", "").strip()
+                    if not status_val: status_val = "อัปเดต"
+                    
+                    self.sheets.upsert_expenditure_bulk([[full, status_val, "-"]])
+                    await update.message.reply_text(f"✅ **อัปเดตสถานะงบประมาณสำเร็จ**\n━━━━━━━━━━━━━━━━━━\n📊 **รายการ:** {full}\n📝 **สถานะล่าสุด:** {status_val}\n📁 ลงชีท ExpenditureStatus เรียบร้อยครับ", parse_mode='Markdown')
                     return True
+        
+        # 2. Natural Memo Logging (Handles "จด ..." or "บันทึก ...")
+        for k in ["จด", "บันทึก", "เพิ่มข้อความ", "เก็บ"]:
+            if text.startswith(k) and len(text) > (len(k) + 1):
+                memo = text[len(k):].strip() # type: ignore
+                # If there's a ":" or "-" at the start after the command, remove it
+                memo = re.sub(r'^[:\-\s]+', '', memo)
+                
+                if memo:
+                    # Default row for Orders/Memo sheet
+                    # Columns: [Detail, Commander, Deadline, Status, Urgency, Note, Timestamp]
+                    row = [memo, "-", "-", "Pending", "Normal", "Auto-Memo", timestamp]
+                    if self.sheets.orders_sheet:
+                        self.sheets.orders_sheet.append_row(row)
+                        await update.message.reply_text(f"📝 **บันทึกโน้ตด่วนสำเร็จ!**\n━━━━━━━━━━━━━━━━━━\n📌 **เรื่อง:** {memo}\n📁 ลงชีท Orders เรียบร้อยแล้วครับ", parse_mode='Markdown')
+                        return True
         return False
 
-    def _parse_arrest_record_deterministic(self, text: str):
-        """Helper parser for arrest summary extraction."""
-        suspects = []
-        sus_start = re.search(r'(?:ผู้ต้องหา|ประกอบด้วย)\s*:?\s*', text)
-        if sus_start:
-            sus_end = re.search(r'(?:พร้อม|ของกลาง|ข้อหา|เกิดเหตุ|$)', text[sus_start.end():]) # type: ignore
-            end_p = sus_start.end() + (sus_end.start() if sus_end else len(text[sus_start.end():])) # type: ignore
-            for s in re.split(r'[\n,]|\d+\.|\d+\)', text[sus_start.end():end_p]):
-                name = s.strip()
-                if len(name) > 5:
-                    age_m = re.search(r'อายุ\s*(\d+)', name)
-                    age = age_m.group(1) if age_m else "-"
-                    clean_name = re.sub(r'อายุ\s*\d+.*', '', name).strip()
-                    suspects.append({"name": clean_name, "age": age})
-        
-        agency_m = re.search(r'สภ\.(\w+)', text)
-        charge_m = re.search(r'ข้อหา\s*([^\n]+)', text)
-        loc_m = re.search(r'เกิดเหตุที่\s*([^\n]+)', text)
-        
-        return {
-            "suspects": suspects,
-            "agency": agency_m.group(0) if agency_m else "-",
-            "charge": charge_m.group(1).strip() if charge_m else "-",
-            "location": loc_m.group(1).strip() if loc_m else "-"
-        }
+    # (Strategic Arrest Parser removed)
 
     async def _show_help(self, update: Update):
         help_msg = ("🛡️ **System Guide**\n"

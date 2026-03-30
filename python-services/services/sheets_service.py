@@ -90,11 +90,7 @@ class SheetsService:
                 "duty": "ทะเบียนยานพาหนะหลวง, เลขโล่ และสถานะการใช้งาน/ซ่อมบำรุง",
                 "columns": ["ID", "Ref", "Dept", "Type1", "Type2", "Shield", "Plate", "Brand", "Chassis", "Engine", "User", "Repair", "Recorder", "GFMIS", "DateCalc", "Mileage", "DateGet", "Status"]
             },
-            "Arrests": {
-                "display_name": "สถิติจับกุม",
-                "duty": "บันทึกข้อมูลการจับกุมคดีอาญาและผู้ต้องหา",
-                "columns": ["วันที่จับกุม", "หน่วยงาน", "ผู้ต้องหา", "อายุ", "เลขบัตร ปชช.", "ที่อยู่ผู้ต้องหา", "ข้อหา", "ของกลาง", "สถานที่จับกุม", "ชุดจับกุม", "Timestamp"]
-            },
+            # (Arrests profile removed)
             "Equipment": {
                 "display_name": "ยุทธภัณฑ์/อุปกรณ์",
                 "duty": "บัญชีคุมยุทธภัณฑ์, อาวุธปืน และอุปกรณ์หลวง",
@@ -148,8 +144,7 @@ class SheetsService:
                 # 🛡️ ชีทยุทธภัณฑ์ (Equipment): [หมวดหมู่, รายการ, ทั้งหมด, ใช้งานอยู่, ในคลัง, หมายเหตุ, อัปเดตล่าสุด]
                 self.equipment_sheet = self._get_or_create_sheet("Equipment", ["Category", "Item", "Total", "InUse", "InStock", "Note", "Updated_At"])
                 
-                # 📑 ชีทบันทึกการจับกุม (Arrests): [วันที่จับกุม, หน่วยงาน, ผู้ต้องหา, อายุ, เลขบัตรปชช, ที่อยู่, ข้อหา, ของกลาง, สถานที่จับกุม, ชุดจับกุม, Timestamp]
-                self.arrests_sheet = self._get_or_create_sheet("Arrests", ["วันที่จับกุม", "หน่วยงาน", "ผู้ต้องหา", "อายุ", "เลขบัตร ปชช.", "ที่อยู่ผู้ต้องหา", "ข้อหา", "ของกลาง", "สถานที่จับกุม", "ชุดจับกุม", "Timestamp"])
+                # (Arrests sheet removed)
                 
                 # 🔫 ชีทบัญชีอาวุธปืน (FirearmRegistry): [ลำดับ, ชนิด, ขนาด, ยี่ห้อ, ทะเบียนโล่, วันรับ, สถานะ, ผู้ยืม, วันที่ยืม, วันที่คืน, วัตถุประสงค์, หมายเหตุ, อัปเดตล่าสุด]
                 self.firearm_registry_sheet = self._get_or_create_sheet("FirearmRegistry", ["ลำดับ", "ชนิดอาวุธปืน", "ขนาด", "ยี่ห้อ", "เลขทะเบียนโล่", "วันรับมอบ", "สถานะ", "ผู้ยืม/ผู้เบิก", "วันที่ยืม", "วันที่คืน", "วัตถุประสงค์", "หมายเหตุ", "Updated_At"])
@@ -181,7 +176,6 @@ class SheetsService:
             "Orders": ["Detail"],
             "Contacts": ["Name", "Phone"],
             "Vehicles": ["Shield", "Plate"],
-            "Arrests": ["ผู้ต้องหา", "ข้อหา"],
             "Equipment": ["Item", "Total"]
         }
         
