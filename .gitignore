@@ -1,0 +1,72 @@
+# Environment variables
+.env
+
+# Google credentials & Secrets
+*.json
+!pyrightconfig.json
+service_account.json
+telegram-smart-memo-*.json
+*.p12
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.venv/
+env/
+venv/
+
+# Backup & Archival
+backup-*/
+backup-original/
+archive_scripts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# User Data / Files (Optional - usually better to exclude if not needed for the repo)
+*.pdf
+*.xlsx
+*.txt
+*.vbs
+*.bat
+*.sh
+!manage.sh
+!setup.sh
+!setup.bat
+!stop_bot.bat
+
+# Project Specific Data
+กองทุนสืบสวน สำนักงานตำรวจแห่งชาติ/
+ข้อมูลพื้นฐาน สภ.มหาราช/
+น้ามันเชื้อเพลิง/
+เดินทางไปราชการ/
+📁/
+📂/
+
