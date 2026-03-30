@@ -30,10 +30,12 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual environments
+# Virtual environments & Dependencies
 .venv/
 env/
 venv/
+node_modules/
+**/node_modules/
 
 # Backup & Archival
 backup-*/

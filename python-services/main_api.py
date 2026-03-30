@@ -11,7 +11,7 @@ from datetime import datetime
 
 # เพิ่ม path เดิมเพื่อใช้ services เดิม
 sys.path.append('..')
-from services.sheets_service import GoogleSheetsService
+from services.sheets_service import SheetsService
 from handlers.contact_handler import ContactHandler
 from handlers.logic_utils import extract_data_with_ai
 from config import Config
@@ -34,7 +34,7 @@ app.add_middleware(
 
 # Initialize services
 config = Config()
-sheets_service = GoogleSheetsService(config)
+sheets_service = SheetsService(config)
 contact_handler = ContactHandler(sheets_service)
 
 # Telegram Bot API endpoint
