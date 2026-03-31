@@ -72,13 +72,20 @@ class GoogleSheetsService {
 
   async loadCredentials() {
     try {
-      // Try to load from environment variable first (for Render deployment)
+      // 1. Try Base64 encoding (Most reliable for Render)
+      if (process.env.GOOGLE_CREDENTIALS_BASE64) {
+        console.log('✅ Using Google credentials from GOOGLE_CREDENTIALS_BASE64');
+        const decoded = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString();
+        return JSON.parse(decoded);
+      }
+
+      // 2. Try to load from environment variable (JSON String)
       if (process.env.GOOGLE_CREDENTIALS) {
         console.log('✅ Using Google credentials from environment variable (Production)');
         return JSON.parse(process.env.GOOGLE_CREDENTIALS);
       }
 
-      // Fallback for old environment variable name
+      // 3. Fallback for old environment variable name
       if (process.env.GOOGLE_CREDENTIALS_JSON) {
         console.log('✅ Using Google credentials from GOOGLE_CREDENTIALS_JSON');
         return JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);

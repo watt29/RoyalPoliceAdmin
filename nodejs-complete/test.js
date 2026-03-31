@@ -62,6 +62,9 @@ async function runTests() {
       serviceAccount = await fs.readJson('service_account.json');
     } else if (await fs.pathExists('../service_account.json')) {
       serviceAccount = await fs.readJson('../service_account.json');
+    } else if (process.env.GOOGLE_CREDENTIALS_BASE64) {
+      const decoded = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString();
+      serviceAccount = JSON.parse(decoded);
     } else if (process.env.GOOGLE_CREDENTIALS) {
       serviceAccount = JSON.parse(process.env.GOOGLE_CREDENTIALS);
     }
