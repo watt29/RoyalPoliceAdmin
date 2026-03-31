@@ -1,0 +1,61 @@
+{
+  "name": "smart-police-report-complete",
+  "version": "3.0.0",
+  "description": "Complete Node.js Smart Police Report Bot - 100% JavaScript",
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "node test.js",
+    "test:bot": "node test-bot.js",
+    "test:google": "node test-google-services.js",
+    "test:jest": "jest",
+    "build": "npm install --production",
+    "render": "node bin/render-start.js",
+    "deploy": "npm run build && node index.js",
+    "health": "curl http://localhost:3000/health",
+    "logs": "tail -f logs/combined.log",
+    "prerender": "npm run test"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "googleapis": "^128.0.0",
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "winston": "^3.11.0",
+    "axios": "^1.6.0",
+    "moment": "^2.29.4",
+    "fs-extra": "^11.2.0",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "uuid": "^9.0.1",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.1",
+    "pdf-lib": "^1.17.1",
+    "exceljs": "^4.4.0",
+    "node-cron": "^3.0.3",
+    "compression": "^1.7.4",
+    "rate-limiter-flexible": "^4.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "@types/node": "^20.10.0"
+  },
+  "keywords": [
+    "telegram-bot",
+    "police",
+    "thailand",
+    "nodejs",
+    "google-sheets",
+    "smart-report"
+  ],
+  "author": "Smart Police Report Team",
+  "license": "MIT"
+}

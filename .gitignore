@@ -4,6 +4,7 @@
 # Google credentials & Secrets
 *.json
 !pyrightconfig.json
+!package*.json
 service_account.json
 telegram-smart-memo-*.json
 *.p12
