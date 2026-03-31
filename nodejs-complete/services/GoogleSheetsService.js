@@ -90,6 +90,12 @@ class GoogleSheetsService {
         return await fs.readJson(credentialsPath);
       }
 
+      // Try parent directory (For Render deployment with Root Directory)
+      const parentPath = path.resolve('..', this.credentialsPath);
+      if (await fs.pathExists(parentPath)) {
+        return await fs.readJson(parentPath);
+      }
+
       // Try shared directory
       const sharedPath = path.resolve('../shared', this.credentialsPath);
       if (await fs.pathExists(sharedPath)) {
