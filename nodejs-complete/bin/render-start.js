@@ -83,6 +83,21 @@ if (process.env.NODE_ENV === 'production') {
   }, keepAliveInterval);
 }
 
+// Optional quick test (non-blocking)
+if (process.env.NODE_ENV === 'production') {
+  console.log('\n🧪 Running production health check...');
+  try {
+    // Quick validation
+    if (process.env.TELEGRAM_BOT_TOKEN && process.env.GOOGLE_CREDENTIALS) {
+      console.log('✅ Essential environment variables present');
+    } else {
+      console.log('⚠️ Some environment variables missing');
+    }
+  } catch (error) {
+    console.warn('⚠️ Health check warning:', error.message);
+  }
+}
+
 console.log('\n🤖 Starting Smart Police Bot...');
 console.log('===============================================\n');
 

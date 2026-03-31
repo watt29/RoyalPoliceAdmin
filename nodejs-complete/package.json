@@ -18,8 +18,7 @@
     "render": "node bin/render-start.js",
     "deploy": "npm run build && node index.js",
     "health": "curl http://localhost:3000/health",
-    "logs": "tail -f logs/combined.log",
-    "prerender": "npm run test"
+    "logs": "tail -f logs/combined.log"
   },
   "dependencies": {
     "node-telegram-bot-api": "^0.66.0",

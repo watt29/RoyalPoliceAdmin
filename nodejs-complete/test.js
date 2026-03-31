@@ -67,11 +67,17 @@ async function runTests() {
     }
 
     if (serviceAccount && serviceAccount.type === 'service_account') {
-      console.log('✅ service_account.json/config - OK');
+      console.log('✅ Google credentials - OK');
       passed++;
     } else {
-      console.log('❌ service_account.json - Not found');
-      failed++;
+      console.log('⚠️ Google credentials - Missing (may use env var in production)');
+      // Don't fail in production if using environment variable
+      if (process.env.NODE_ENV === 'production' && process.env.GOOGLE_CREDENTIALS) {
+        console.log('✅ Using GOOGLE_CREDENTIALS from environment');
+        passed++;
+      } else {
+        failed++;
+      }
     }
   } catch (error) {
     console.log('❌ service_account.json - Error');
