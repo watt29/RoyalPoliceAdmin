@@ -18,8 +18,7 @@ console.log(`🌍 Port: ${process.env.PORT || 3000}`);
 // Check critical environment variables
 const requiredEnvVars = [
   'TELEGRAM_BOT_TOKEN',
-  'GOOGLE_SHEET_ID',
-  'GOOGLE_CREDENTIALS'
+  'GOOGLE_SHEET_ID'
 ];
 
 console.log('\n🔍 Checking environment variables...');
@@ -34,6 +33,16 @@ requiredEnvVars.forEach(varName => {
   }
 });
 
+// Check Google Credentials (supports both formats)
+if (process.env.GOOGLE_CREDENTIALS_BASE64) {
+  console.log('✅ GOOGLE_CREDENTIALS_BASE64 - OK');
+} else if (process.env.GOOGLE_CREDENTIALS) {
+  console.log('✅ GOOGLE_CREDENTIALS - OK');
+} else {
+  console.log('❌ Google Credentials - MISSING (need GOOGLE_CREDENTIALS_BASE64 or GOOGLE_CREDENTIALS)');
+  missingVars.push('GOOGLE_CREDENTIALS');
+}
+
 if (missingVars.length > 0) {
   console.error('\n❌ Missing required environment variables:', missingVars);
   console.error('Please set them in your Render dashboard');
@@ -42,11 +51,22 @@ if (missingVars.length > 0) {
 
 // Validate Google Credentials JSON
 try {
-  const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+  let credentials;
+
+  if (process.env.GOOGLE_CREDENTIALS_BASE64) {
+    const decoded = Buffer.from(process.env.GOOGLE_CREDENTIALS_BASE64, 'base64').toString();
+    credentials = JSON.parse(decoded);
+    console.log('✅ Google credentials (Base64) - Valid JSON');
+  } else if (process.env.GOOGLE_CREDENTIALS) {
+    credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    console.log('✅ Google credentials - Valid JSON');
+  } else {
+    throw new Error('No Google credentials found');
+  }
+
   if (credentials.type !== 'service_account') {
     throw new Error('Invalid service account credentials');
   }
-  console.log('✅ Google credentials - Valid JSON');
 } catch (error) {
   console.error('❌ Google credentials - Invalid JSON:', error.message);
   process.exit(1);
@@ -88,7 +108,8 @@ if (process.env.NODE_ENV === 'production') {
   console.log('\n🧪 Running production health check...');
   try {
     // Quick validation
-    if (process.env.TELEGRAM_BOT_TOKEN && process.env.GOOGLE_CREDENTIALS) {
+    const hasGoogleCreds = process.env.GOOGLE_CREDENTIALS_BASE64 || process.env.GOOGLE_CREDENTIALS;
+    if (process.env.TELEGRAM_BOT_TOKEN && hasGoogleCreds) {
       console.log('✅ Essential environment variables present');
     } else {
       console.log('⚠️ Some environment variables missing');
